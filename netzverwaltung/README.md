@@ -1,9 +1,9 @@
 # Netzverwaltung
 
-Weboberfläche für DHCP und Routing des Unterrichtsnetzes auf dem KlassenServer.
+Weboberfläche für DHCP und Routing.
 
 Deckt bewusst nur ab, was Cockpit nicht kann. Interfaces, Routen, Dienste,
-Logs und Terminal bleiben in **Cockpit auf Port 9090**. Hier gibt es:
+Hier gibt es:
 
 - **VLANs** anlegen, ändern, entfernen — NetworkManager-Verbindung, firewalld-Zone,
   DHCP-Bereich und Regeln in einem Vorgang
