@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Bestehenden Aufbau übernehmen</h1>
+<p class="lede">
+  Liest, was gerade auf dem Server läuft, und schreibt es in die Wahrheitsdatei.
+  Danach zeigt „Ausstehende Änderungen“ idealerweise nichts an – dann ist der Ist-Zustand
+  vollständig abgebildet.
+</p>
+
+<h2>Erkannt</h2>
+<div class="panel scroll">
+  <table>
+    <thead><tr><th>VLAN</th><th class="num">ID</th><th>Netz</th><th>DHCP</th>
+               <th>Internet</th><th>Haupt-LAN</th><th>Switch</th><th>Nachbarn</th></tr></thead>
+    <tbody>
+      {% for v in detected.vlans %}
+      <tr>
+        <td><strong>{{ v.name }}</strong></td>
+        <td class="num mono">{{ v.vlan_id }}</td>
+        <td class="mono">{{ v.network }}</td>
+        <td class="mono">{% if v.dhcp.enabled %}{{ v.dhcp.start }} – {{ v.dhcp.end }}{% else %}—{% endif %}</td>
+        <td>{{ 'ja' if v.access.internet else 'nein' }}</td>
+        <td>{{ 'ja' if v.access.haupt_lan else 'nein' }}</td>
+        <td>{{ 'ja' if v.access.switch_gui else 'nein' }}</td>
+        <td>{{ v.access.vlans|join(', ') or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">Keine VLAN-Verbindungen in NetworkManager gefunden.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if obsolete %}
+<h2>Wird ersetzt</h2>
+<div class="panel">
+  <p>
+    Diese handgeschriebenen Policies regeln dasselbe wie die künftig erzeugten. Sie werden
+    beim ersten Anwenden entfernt – sonst würde die Zugriffsmatrix lügen: sie zeigte
+    „gesperrt“, während die alte Regel weiter durchlässt.
+  </p>
+  <p>{% for name in obsolete %}<code>{{ name }}</code>{{ ", " if not loop.last }}{% endfor %}</p>
+  <p class="hint">
+    Eine Sicherung aller berührten Dateien landet vorher unter
+    <code>/var/lib/netzverwaltung/backups/</code>.
+  </p>
+</div>
+{% endif %}
+
+{% if notes %}
+<h2>Hinweise</h2>
+<div class="panel">
+  <ul>{% for n in notes %}<li>{{ n }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="/import">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="sticky-save">
+    <button class="btn" type="submit">Übernehmen</button>
+    <a class="btn ghost" href="/">Abbrechen</a>
+    <span class="label" style="margin-left:auto">Ändert noch nichts am laufenden Router</span>
+  </div>
+</form>
+{% endblock %}

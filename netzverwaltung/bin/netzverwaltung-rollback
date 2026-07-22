@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+"""Nimmt die letzte, nicht bestaetigte Aenderung zurueck.
+
+Wird von einer transienten systemd-Unit aufgerufen, die beim Anwenden geplant
+wird. Bewusst ein eigener Prozess: wenn die Weboberflaeche nach der Aenderung
+nicht mehr erreichbar ist oder abgestuerzt ist, muss die Ruecknahme trotzdem
+laufen.
+"""
+import sys
+
+sys.path.insert(0, "/opt/netzverwaltung")
+
+from app import applier  # noqa: E402
+
+if __name__ == "__main__":
+    applier.rollback_now()
+    print("Netzverwaltung: nicht bestaetigte Aenderung zurueckgenommen.")

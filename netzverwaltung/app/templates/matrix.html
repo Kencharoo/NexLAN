@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Zugriff</h1>
+<p class="lede">
+  Wer darf wohin. Ohne Häkchen ist ein VLAN vollständig abgeschottet – das ist der
+  Ausgangszustand für jedes neue Netz.
+</p>
+
+<form method="post" action="/matrix">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+
+<h2>Nach außen</h2>
+<div class="panel scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>VLAN</th>
+        <th>Internet</th>
+        <th>Haupt-LAN <span class="mono">{{ config.LAN_SUBNET }}</span></th>
+        <th>Switch-Oberfläche <span class="mono">{{ config.SWITCH_IP }}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in state.vlans %}
+      <tr>
+        <th class="row">{{ v.name }}</th>
+        <td><input type="checkbox" name="internet:{{ v.name }}" {{ 'checked' if v.access.internet }}></td>
+        <td><input type="checkbox" name="lan:{{ v.name }}" {{ 'checked' if v.access.haupt_lan }}></td>
+        <td><input type="checkbox" name="switch:{{ v.name }}" {{ 'checked' if v.access.switch_gui }}></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="hint">
+  „Internet“ erlaubt den Weg über <code>eno1</code> nach draußen und sperrt dabei alle
+  privaten Netze. Erst „Haupt-LAN“ öffnet zusätzlich {{ config.LAN_SUBNET }}.
+</p>
+
+<h2>Untereinander</h2>
+<div class="panel scroll">
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th class="rot"><div><span>von ↓ &nbsp; nach →</span></div></th>
+        {% for v in state.vlans %}<th class="rot"><div><span>{{ v.name }}</span></div></th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in state.vlans %}
+      <tr>
+        <th class="row">{{ a.name }}</th>
+        {% for b in state.vlans %}
+          {% if a.name == b.name %}
+          <td class="self">–</td>
+          {% else %}
+          <td><input type="checkbox" name="peer:{{ a.name }}:{{ b.name }}"
+                     {{ 'checked' if b.name in a.access.vlans }}></td>
+          {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="hint">
+  Ein Häkchen erlaubt der Zeile, die Spalte anzusprechen. Antworten kommen automatisch
+  zurück – für eine Verbindung in beide Richtungen ist also nur ein Häkchen nötig,
+  gesetzt beim anfragenden Netz.
+</p>
+
+<h2>Dienste auf dem Server</h2>
+{% for v in state.vlans %}
+<details class="panel" {{ 'open' if loop.first }}>
+  <summary><strong>{{ v.name }}</strong>
+    <span class="label">– {{ v.access.services|length }} Dienste, {{ v.access.ports|length }} Anwendungen</span>
+  </summary>
+  <div class="grid" style="margin-top:1rem">
+    <div>
+      <p class="label">Systemdienste</p>
+      {% for svc, label in config.HOST_SERVICES %}
+      <div class="check">
+        <input type="checkbox" id="svc-{{ v.name }}-{{ svc }}" name="svc:{{ v.name }}:{{ svc }}"
+               {{ 'checked' if svc in v.access.services }}>
+        <label for="svc-{{ v.name }}-{{ svc }}" style="margin:0"><span>{{ label }}</span></label>
+      </div>
+      {% endfor %}
+    </div>
+    <div>
+      <p class="label">Anwendungen</p>
+      {% for port, label in config.HOST_PORTS %}
+      <div class="check">
+        <input type="checkbox" id="port-{{ v.name }}-{{ port|replace('/','-') }}"
+               name="port:{{ v.name }}:{{ port }}" {{ 'checked' if port in v.access.ports }}>
+        <label for="port-{{ v.name }}-{{ port|replace('/','-') }}" style="margin:0">
+          <span>{{ label }} <span class="mono">{{ port }}</span></span>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</details>
+{% endfor %}
+
+<div class="sticky-save">
+  <button class="btn" type="submit">Speichern</button>
+  <a class="btn ghost" href="/">Abbrechen</a>
+</div>
+</form>
+{% endblock %}

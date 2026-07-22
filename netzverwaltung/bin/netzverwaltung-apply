@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+"""Wendet /etc/netzverwaltung/netz.yaml auf den Router an -- ohne Weboberflaeche.
+
+Nuetzlich, wenn die YAML von Hand editiert wurde oder die Oberflaeche klemmt.
+Ohne --sofort gilt dieselbe Bestaetigungsfrist wie im Browser: dann muss
+innerhalb der Frist "netzverwaltung-apply --bestaetigen" laufen.
+"""
+import sys
+
+sys.path.insert(0, "/opt/netzverwaltung")
+
+from app import applier, store  # noqa: E402
+from app.model import ValidationError  # noqa: E402
+
+
+def main(argv: list[str]) -> int:
+    if "--bestaetigen" in argv:
+        applier.confirm()
+        print("Bestaetigt.")
+        return 0
+
+    try:
+        state = store.load()
+    except Exception as exc:
+        print(f"netz.yaml nicht lesbar: {exc}", file=sys.stderr)
+        return 1
+
+    changes = applier.diff(state)
+    if not changes:
+        print("Nichts zu tun.")
+        return 0
+
+    for change in changes:
+        print(f"[{change.action}] {change.path}")
+    if "--pruefen" in argv:
+        return 0
+
+    try:
+        result = applier.apply(state, with_rollback="--sofort" not in argv)
+    except (ValidationError, applier.ApplyError) as exc:
+        print(f"Fehlgeschlagen: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"Angewendet. Sicherung: {result['backup']}")
+    if result["deadline"]:
+        print("Innerhalb der Frist bestaetigen mit: netzverwaltung-apply --bestaetigen")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

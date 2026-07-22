@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>DNS-Filter</h1>
+<p class="lede">
+  Gesperrte Domains werden für das jeweilige VLAN nicht mehr aufgelöst.
+</p>
+
+<div class="panel">
+  <p style="margin:0">
+    <strong>Wie das funktioniert:</strong> dnsmasq kann Sperrlisten nicht pro Netz
+    unterscheiden. Sobald hier ein VLAN gefiltert wird, läuft deshalb eine zweite
+    dnsmasq-Instanz (<code>dnsmasq-filter</code>) auf <code>10.99.99.1</code>. Gefilterte
+    VLANs bekommen per DHCP diesen Resolver statt der Serveradresse; alles Unbekannte
+    reicht er an den Haupt-dnsmasq weiter, damit lokale Gerätenamen weiter funktionieren.
+    Ungefilterte VLANs merken davon nichts.
+  </p>
+</div>
+
+<form method="post" action="/filter">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+
+{% for v in state.vlans %}
+<details class="panel" {{ 'open' if v.dns_filter.enabled }}>
+  <summary>
+    <strong>{{ v.name }}</strong>
+    {% if v.dns_filter.enabled %}
+      <span class="pill on">aktiv</span>
+      <span class="label">{{ v.dns_filter.block|length }} gesperrt, {{ v.dns_filter.allow|length }} erlaubt</span>
+    {% else %}<span class="pill off">aus</span>{% endif %}
+  </summary>
+
+  <div class="check" style="margin-top:1rem">
+    <input type="checkbox" id="f-{{ v.name }}" name="filter:{{ v.name }}"
+           {{ 'checked' if v.dns_filter.enabled }}>
+    <label for="f-{{ v.name }}" style="margin:0"><span>Filter für dieses VLAN einschalten</span></label>
+  </div>
+
+  <div class="grid">
+    <label><span>Gesperrte Domains – eine pro Zeile, gilt samt Unterdomains</span>
+      <textarea name="block:{{ v.name }}" placeholder="tiktok.com&#10;instagram.com">{{ v.dns_filter.block|join('\n') }}</textarea>
+    </label>
+    <label><span>Ausnahmen – werden trotz Sperrliste aufgelöst</span>
+      <textarea name="allow:{{ v.name }}" placeholder="edu.tiktok.com">{{ v.dns_filter.allow|join('\n') }}</textarea>
+    </label>
+  </div>
+  <p class="hint">
+    Geräte merken eine Sperre erst, wenn ihr eigener DNS-Zwischenspeicher abläuft –
+    im Zweifel WLAN am Gerät kurz aus- und einschalten.
+  </p>
+</details>
+{% else %}
+<div class="panel">Es gibt noch keine VLANs, die sich filtern ließen.</div>
+{% endfor %}
+
+<div class="sticky-save">
+  <button class="btn" type="submit">Speichern</button>
+  <a class="btn ghost" href="/">Abbrechen</a>
+</div>
+</form>
+{% endblock %}

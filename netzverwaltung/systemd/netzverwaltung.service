@@ -1,0 +1,23 @@
+[Unit]
+Description=Netzverwaltung -- Weboberflaeche fuer DHCP und Routing
+Documentation=file:/opt/netzverwaltung/README.md
+After=network-online.target firewalld.service dnsmasq.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+WorkingDirectory=/opt/netzverwaltung
+ExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8090 --proxy-headers
+Restart=on-failure
+RestartSec=3
+
+# Laeuft als root: die App ruft nmcli, firewall-cmd und systemctl auf und
+# schreibt nach /etc/firewalld und /etc/dnsmasq.d. Ein unprivilegierter Dienst
+# muesste dasselbe ueber sudo-Regeln tun und waere damit nicht sicherer.
+# Der Zugang ist stattdessen durch Passwort und Zonenfreigabe begrenzt.
+NoNewPrivileges=no
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

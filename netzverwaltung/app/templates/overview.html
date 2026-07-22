@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Übersicht</h1>
+<p class="lede">Der Server routet {{ state.vlans|length }} VLANs und verteilt darin die Adressen.</p>
+
+<div class="cards">
+  <div class="card">
+    <div class="big">{{ state.vlans|length }}</div>
+    <div class="label">verwaltete VLANs</div>
+  </div>
+  <div class="card">
+    <div class="big">{{ total_leases }}</div>
+    <div class="label">Geräte mit aktueller Adresse</div>
+  </div>
+  {% for svc in services %}
+  <div class="card">
+    <div class="big">
+      {% if svc.state == 'active' %}<span class="pill on">läuft</span>
+      {% elif svc.state == 'inactive' %}<span class="pill off">aus</span>
+      {% else %}<span class="pill warn">{{ svc.state }}</span>{% endif %}
+    </div>
+    <div class="label">{{ svc.label }} <span class="mono">({{ svc.unit }})</span></div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Netze</h2>
+<div class="panel scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>VLAN</th><th class="num">ID</th><th>Netz</th><th>Server</th>
+        <th>DHCP-Bereich</th><th class="num">Geräte</th><th>Internet</th><th>DNS-Filter</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in state.vlans %}
+      <tr>
+        <td><a href="/vlans/{{ v.name }}"><strong>{{ v.name }}</strong></a>
+            {% if v.description %}<br><span class="label">{{ v.description }}</span>{% endif %}</td>
+        <td class="num mono">{{ v.vlan_id }}</td>
+        <td class="mono">{{ v.network }}</td>
+        <td class="mono">{{ v.gateway }}</td>
+        <td class="mono">{% if v.dhcp.enabled %}{{ v.dhcp.start }} – {{ v.dhcp.end }} ({{ v.dhcp.lease }}){% else %}<span class="pill off">aus</span>{% endif %}</td>
+        <td class="num">{{ counts.get(v.name, 0) }}</td>
+        <td>{% if v.access.internet %}<span class="pill on">ja</span>{% else %}<span class="pill off">nein</span>{% endif %}</td>
+        <td>{% if v.dns_filter.enabled %}<span class="pill on">aktiv</span>{% else %}<span class="pill off">aus</span>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">Noch nichts eingerichtet. <a href="/import">Bestehenden Aufbau übernehmen</a>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Nicht von hier verwaltet</h2>
+<div class="panel">
+  <p class="lede" style="margin:0">
+    Das Haupt-LAN an <code>eno1</code> ({{ config.LAN_SUBNET }}), das Switch-Management
+    ({{ config.SWITCH_IP }}) und das Client-Netz am Switch (192.168.179.0/24) bleiben in
+    Handarbeit – sie hängen an Proxy-ARP und festen Adressen, die eine generierte Konfiguration
+    nicht sauber abbilden würde. Zuständig sind dort <code>/etc/dnsmasq.d/switch-mgmt.conf</code>
+    und die Policies <code>lan-to-switch</code>, <code>switchnet-to-switch</code>, <code>vlans-egress</code>.
+  </p>
+</div>
+{% endblock %}

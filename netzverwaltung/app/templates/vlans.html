@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>VLANs</h1>
+<p class="lede">Jedes VLAN ist ein eigenes Netz am Trunk <code>{{ config.VLAN_PARENT }}</code> zum Switch.</p>
+
+<p><a class="btn" href="/vlans/neu">Neues VLAN anlegen</a></p>
+
+<div class="panel scroll">
+  <table>
+    <thead>
+      <tr><th>Name</th><th class="num">VLAN-ID</th><th>Netz</th><th>Serveradresse</th>
+          <th>DHCP</th><th>Reservierungen</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for v in state.vlans %}
+      <tr>
+        <td><a href="/vlans/{{ v.name }}"><strong>{{ v.name }}</strong></a>
+            {% if v.description %}<br><span class="label">{{ v.description }}</span>{% endif %}</td>
+        <td class="num mono">{{ v.vlan_id }}</td>
+        <td class="mono">{{ v.network }}</td>
+        <td class="mono">{{ v.address }}</td>
+        <td>{% if v.dhcp.enabled %}<span class="pill on">an</span>{% else %}<span class="pill off">aus</span>{% endif %}</td>
+        <td class="num">{{ v.reservations|length }}</td>
+        <td><a class="btn small ghost" href="/vlans/{{ v.name }}">Bearbeiten</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Noch keine VLANs. <a href="/import">Bestehenden Aufbau übernehmen</a> oder neu anlegen.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

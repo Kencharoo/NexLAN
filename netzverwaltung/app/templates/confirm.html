@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="centered" style="text-align:center">
+  <h1>Läuft es noch?</h1>
+  <p class="lede">
+    Die Änderung ist aktiv. Prüfe kurz, ob Netz und Geräte noch erreichbar sind –
+    und bestätige dann. Ohne Bestätigung nimmt der Server alles automatisch zurück.
+  </p>
+
+  <p class="countdown" id="countdown">{{ remaining }}</p>
+  <p class="label">Sekunden bis zur automatischen Rücknahme</p>
+
+  <form method="post" action="/bestaetigen">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn" type="submit" style="width:100%;padding:0.75rem">Alles in Ordnung – behalten</button>
+  </form>
+  <p class="hint" style="margin-top:1rem">
+    Wenn du diese Seite nicht mehr laden kannst, hast du dich ausgesperrt – dann einfach
+    warten, der alte Stand kommt von allein zurück.
+  </p>
+</div>
+
+<script>
+  let left = {{ remaining }};
+  const el = document.getElementById('countdown');
+  setInterval(() => {
+    left -= 1;
+    el.textContent = left > 0 ? left : 0;
+    if (left <= 0) location.href = '/';
+  }, 1000);
+</script>
+{% endblock %}

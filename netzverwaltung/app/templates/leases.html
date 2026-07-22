@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Geräte</h1>
+<p class="lede">
+  Alle Geräte, die gerade eine Adresse vom Server haben. Ein Klick auf „Feste Adresse“
+  macht daraus eine dauerhafte Reservierung.
+</p>
+
+<div class="panel scroll">
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Adresse</th><th>MAC</th><th>VLAN</th><th>Läuft ab in</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for l in leases %}
+      <tr>
+        <td>{{ l.hostname_display }}</td>
+        <td class="mono">{{ l.ip }}</td>
+        <td class="mono">{{ l.mac }}</td>
+        <td>{{ l.vlan }}</td>
+        <td>{{ l.remaining }}</td>
+        <td>
+          {% if l.mac in reserved %}
+            <span class="pill on">fest</span>
+            <button class="btn small danger" form="rel-{{ loop.index }}">aufheben</button>
+          {% elif l.vlan in state.vlans|map(attribute='name')|list %}
+            <button class="btn small" form="res-{{ loop.index }}">Feste Adresse</button>
+          {% else %}
+            <span class="pill off">nicht verwaltet</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Zurzeit hat kein Gerät eine Adresse.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="hint">
+  „Feste Adresse“ behält die aktuelle Adresse bei, falls sie außerhalb des dynamischen
+  Bereichs liegt – sonst wird die nächste freie Adresse davor vorgeschlagen.
+</p>
+
+{% for l in leases %}
+  {% if l.mac in reserved %}
+  <form method="post" action="/leases/freigeben" id="rel-{{ loop.index }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="mac" value="{{ l.mac }}">
+  </form>
+  {% else %}
+  <form method="post" action="/leases/reservieren" id="res-{{ loop.index }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="mac" value="{{ l.mac }}">
+    <input type="hidden" name="vlan" value="{{ l.vlan }}">
+    <input type="hidden" name="hostname" value="{{ l.hostname_display }}">
+  </form>
+  {% endif %}
+{% endfor %}
+{% endblock %}

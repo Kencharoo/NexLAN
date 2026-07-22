@@ -1,0 +1,19 @@
+[Unit]
+Description=dnsmasq -- gefilterter Resolver fuer einzelne VLANs
+Documentation=file:/opt/netzverwaltung/README.md
+After=network-online.target dnsmasq.service
+Wants=network-online.target
+# Ohne den Haupt-dnsmasq waeren lokale Geraetenamen nicht aufloesbar.
+BindsTo=dnsmasq.service
+ConditionPathExists=/etc/netzverwaltung/dnsmasq-filter.conf
+
+[Service]
+Type=exec
+ExecStartPre=/usr/sbin/dnsmasq --test --conf-file=/etc/netzverwaltung/dnsmasq-filter.conf
+ExecStart=/usr/sbin/dnsmasq -k --conf-file=/etc/netzverwaltung/dnsmasq-filter.conf --pid-file=
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

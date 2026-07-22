@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Netzverwaltung{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <a class="brand" href="/">Netzverwaltung</a>
+  <nav>
+    <a href="/vlans" {% if request.url.path.startswith('/vlans') %}class="on"{% endif %}>VLANs</a>
+    <a href="/leases" {% if request.url.path == '/leases' %}class="on"{% endif %}>Geräte</a>
+    <a href="/matrix" {% if request.url.path == '/matrix' %}class="on"{% endif %}>Zugriff</a>
+    <a href="/filter" {% if request.url.path == '/filter' %}class="on"{% endif %}>DNS-Filter</a>
+    <a href="http://{{ request.url.hostname }}:9090/" target="_blank" rel="noopener">Cockpit ↗</a>
+  </nav>
+  <form method="post" action="/logout" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="link">Abmelden</button>
+  </form>
+</header>
+
+{% if pending %}
+<div class="banner urgent">
+  <span>Eine Änderung wartet auf Bestätigung. Ohne Bestätigung wird sie automatisch zurückgenommen.</span>
+  <a class="btn small" href="/bestaetigen">Jetzt bestätigen</a>
+</div>
+{% elif dirty and request.url.path != '/aenderungen' %}
+<div class="banner">
+  <span>Es gibt gespeicherte Änderungen, die noch nicht auf dem Router aktiv sind.</span>
+  <a class="btn small" href="/aenderungen">Anzeigen und anwenden</a>
+</div>
+{% endif %}
+
+<main>
+  {% if note %}<p class="flash ok">{{ note.replace('+', ' ') }}</p>{% endif %}
+  {% if error %}<p class="flash bad">{{ error.replace('+', ' ')|safe }}</p>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  Interfaces, Routen, Logs und Dienste verwaltet <a href="http://{{ request.url.hostname }}:9090/">Cockpit</a>.
+  Diese Oberfläche pflegt <code>/etc/netzverwaltung/netz.yaml</code> und erzeugt daraus dnsmasq- und firewalld-Konfiguration.
+</footer>
+</body>
+</html>

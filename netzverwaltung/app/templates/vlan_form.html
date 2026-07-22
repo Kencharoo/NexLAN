@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% set neu = vlan is none %}
+{% set d = suggestion or {} %}
+{% block content %}
+<h1>{{ "Neues VLAN" if neu else "VLAN " ~ vlan.name }}</h1>
+<p class="lede">
+  {% if neu %}
+  Legt in einem Zug an: die VLAN-Verbindung in NetworkManager, die firewalld-Zone,
+  den DHCP-Bereich und – falls unten aktiviert – den Internetzugang.
+  {% else %}
+  Änderungen werden erst nach dem Anwenden auf dem Router wirksam.
+  {% endif %}
+</p>
+
+<form method="post" action="{{ '/vlans/neu' if neu else '/vlans/' ~ vlan.name }}">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+
+<div class="panel">
+  <div class="grid">
+    <label><span>Name (wird zum Interface-Namen)</span>
+      <input type="text" name="name" required pattern="[a-z][a-z0-9-]{0,13}"
+             value="{{ vlan.name if not neu else '' }}" {{ 'readonly' if not neu }}>
+    </label>
+    <label><span>VLAN-ID am Switch (1–4094)</span>
+      <input type="number" name="vlan_id" required min="1" max="4094"
+             value="{{ vlan.vlan_id if not neu else d.vlan_id }}">
+    </label>
+    <label><span>Trunk-Interface</span>
+      <input type="text" name="parent" value="{{ vlan.parent if not neu else config.VLAN_PARENT }}">
+    </label>
+  </div>
+  <label><span>Serveradresse mit Präfix – der Server ist hier Gateway und DNS</span>
+    <input type="text" name="address" required placeholder="192.168.50.1/24"
+           value="{{ vlan.address if not neu else d.address }}">
+  </label>
+  <label><span>Beschreibung (optional)</span>
+    <input type="text" name="description" value="{{ vlan.description if not neu else '' }}"
+           placeholder="z.B. Klassenraum 204">
+  </label>
+</div>
+
+<h2>DHCP</h2>
+<div class="panel">
+  <div class="check">
+    <input type="checkbox" id="dhcp" name="dhcp_enabled"
+           {{ 'checked' if neu or vlan.dhcp.enabled }}>
+    <label for="dhcp" style="margin:0"><span>Adressen in diesem VLAN automatisch vergeben</span></label>
+  </div>
+  <div class="grid">
+    <label><span>Bereich von</span>
+      <input type="text" name="dhcp_start" placeholder="192.168.50.50"
+             value="{{ vlan.dhcp.start if not neu else d.start }}">
+    </label>
+    <label><span>Bereich bis</span>
+      <input type="text" name="dhcp_end" placeholder="192.168.50.250"
+             value="{{ vlan.dhcp.end if not neu else d.end }}">
+    </label>
+    <label><span>Gültigkeit einer Adresse</span>
+      <input type="text" name="dhcp_lease" placeholder="12h"
+             value="{{ vlan.dhcp.lease if not neu else '12h' }}">
+    </label>
+  </div>
+  <p class="hint">
+    Adressen unterhalb des Bereichs bleiben für feste Reservierungen frei –
+    die legst du unter <a href="/leases">Geräte</a> mit einem Klick an.
+  </p>
+</div>
+
+{% if not neu and vlan.reservations %}
+<h2>Feste Adressen</h2>
+<div class="panel scroll">
+  <table>
+    <thead><tr><th>MAC</th><th>Adresse</th><th>Name</th><th></th></tr></thead>
+    <tbody>
+      {% for r in vlan.reservations %}
+      <tr>
+        <td class="mono">{{ r.mac }}</td>
+        <td class="mono">{{ r.ip }}</td>
+        <td>{{ r.name or '—' }}</td>
+        <td>
+          <button class="btn small danger" form="release-{{ loop.index }}">Aufheben</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="sticky-save">
+  <button class="btn" type="submit">{{ "VLAN anlegen" if neu else "Speichern" }}</button>
+  <a class="btn ghost" href="/vlans">Abbrechen</a>
+  {% if not neu %}
+  <span style="margin-left:auto"></span>
+  <button class="btn danger" form="delete" onclick="return confirm('VLAN {{ vlan.name }} wirklich entfernen? Interface, Zone, DHCP-Bereich und alle Regeln dazu werden gelöscht.')">VLAN entfernen</button>
+  {% endif %}
+</div>
+</form>
+
+{% if not neu %}
+<form method="post" action="/vlans/{{ vlan.name }}/loeschen" id="delete">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+</form>
+{% for r in vlan.reservations %}
+<form method="post" action="/leases/freigeben" id="release-{{ loop.index }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="mac" value="{{ r.mac }}">
+</form>
+{% endfor %}
+{% endif %}
+{% endblock %}

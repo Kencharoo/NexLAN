@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Ausstehende Änderungen</h1>
+
+{% if changes %}
+<p class="lede">
+  Das würde sich auf dem Router ändern. Nach dem Anwenden hast du
+  {{ config.ROLLBACK_SECONDS }} Sekunden Zeit zu bestätigen – bleibt die Bestätigung aus,
+  stellt der Server von selbst den vorherigen Stand wieder her.
+</p>
+
+{% for c in changes %}
+<div class="panel">
+  <p style="margin-top:0">
+    <span class="pill {{ 'on' if c.action == 'neu' else 'warn' if c.action == 'geaendert' else 'off' }}">{{ c.action }}</span>
+    <span class="label">{{ c.kind }}</span><br>
+    <code>{{ c.path }}</code>
+  </p>
+  <pre class="diff">{% for line in c.diff.splitlines() %}{% if line.startswith('+') and not line.startswith('+++') %}<span class="add">{{ line }}</span>
+{% elif line.startswith('-') and not line.startswith('---') %}<span class="del">{{ line }}</span>
+{% elif line.startswith('@@') or line.startswith('+++') or line.startswith('---') %}<span class="meta">{{ line }}</span>
+{% else %}{{ line }}
+{% endif %}{% endfor %}</pre>
+</div>
+{% endfor %}
+
+<form method="post" action="/anwenden">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="sticky-save">
+    <button class="btn" type="submit">Jetzt anwenden</button>
+    <a class="btn ghost" href="/">Später</a>
+    <span class="label" style="margin-left:auto">
+      dnsmasq und firewalld werden dabei neu geladen
+    </span>
+  </div>
+</form>
+{% else %}
+<p class="lede">Die Konfiguration auf dem Router entspricht dem, was hier eingestellt ist.</p>
+<a class="btn ghost" href="/">Zur Übersicht</a>
+{% endif %}
+{% endblock %}
