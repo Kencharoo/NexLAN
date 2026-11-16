@@ -5,16 +5,41 @@ Nuetzlich, wenn die YAML von Hand editiert wurde oder die Oberflaeche klemmt.
 Ohne --sofort gilt dieselbe Bestaetigungsfrist wie im Browser: dann muss
 innerhalb der Frist "netzverwaltung-apply --bestaetigen" laufen.
 """
+import argparse
+import os
 import sys
 
 sys.path.insert(0, "/opt/netzverwaltung")
 
-from app import applier, store  # noqa: E402
-from app.model import ValidationError  # noqa: E402
+
+def parse(argv: list[str]) -> argparse.Namespace:
+    # Unbekannte Argumente brechen ab, statt (wie frueher) einfach anzuwenden:
+    # "netzverwaltung-apply --help" darf nie das Netz umbauen.
+    p = argparse.ArgumentParser(
+        prog="netzverwaltung-apply",
+        description="Wendet /etc/netzverwaltung/netz.yaml an (ohne Weboberflaeche).",
+        epilog="Ohne Option: anwenden, mit Bestaetigungsfrist. Muss als root laufen.",
+    )
+    mode = p.add_mutually_exclusive_group()
+    mode.add_argument("--pruefen", action="store_true", help="nur zeigen, was sich aendern wuerde")
+    mode.add_argument("--bestaetigen", action="store_true", help="die laufende Aenderung innerhalb der Frist bestaetigen")
+    mode.add_argument("--sofort", action="store_true", help="anwenden ohne Frist und ohne Ruecknahme")
+    return p.parse_args(argv)
 
 
 def main(argv: list[str]) -> int:
-    if "--bestaetigen" in argv:
+    args = parse(argv)
+
+    # Ohne root sind die erzeugten Dateien nicht lesbar: der Vergleich meldete
+    # dann Aenderungen, wo keine sind, und Anwenden scheitert mittendrin.
+    if os.geteuid() != 0:
+        print("netzverwaltung-apply muss als root laufen: sudo netzverwaltung-apply ...", file=sys.stderr)
+        return 1
+
+    from app import applier, store  # noqa: E402
+    from app.model import ValidationError  # noqa: E402
+
+    if args.bestaetigen:
         applier.confirm()
         print("Bestaetigt.")
         return 0
@@ -32,11 +57,11 @@ def main(argv: list[str]) -> int:
 
     for change in changes:
         print(f"[{change.action}] {change.path}")
-    if "--pruefen" in argv:
+    if args.pruefen:
         return 0
 
     try:
-        result = applier.apply(state, with_rollback="--sofort" not in argv)
+        result = applier.apply(state, with_rollback=not args.sofort)
     except (ValidationError, applier.ApplyError) as exc:
         print(f"Fehlgeschlagen: {exc}", file=sys.stderr)
         return 1

@@ -65,7 +65,9 @@ netzverwaltung-apply --bestaetigen  # innerhalb der Frist bestätigen
 netzverwaltung-apply --sofort       # anwenden ohne Frist und ohne Rücknahme
 ```
 
-Nützlich, wenn `netz.yaml` von Hand editiert wurde oder die Oberfläche klemmt.
+Nützlich, wenn `netz.yaml` von Hand editiert wurde oder die Oberfläche klemmt. Der Befehl muss als
+root laufen (sonst bricht er mit einem Hinweis ab, statt einen falschen Vergleich zu zeigen);
+`netzverwaltung-apply --help` zeigt die Optionen, unbekannte Optionen brechen ab.
 
 ## Installation und Aktualisierung
 
